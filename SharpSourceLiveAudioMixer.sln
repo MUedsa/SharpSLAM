@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2026
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SharpSourceLiveAudioMixer", "SharpSourceLiveAudioMixer\SharpSourceLiveAudioMixer.csproj", "{CEB5D24F-33F7-458C-931C-FB068D50AACF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CEB5D24F-33F7-458C-931C-FB068D50AACF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEB5D24F-33F7-458C-931C-FB068D50AACF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEB5D24F-33F7-458C-931C-FB068D50AACF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEB5D24F-33F7-458C-931C-FB068D50AACF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1DA96A92-F6DF-45B9-8689-5DF0A3139CB4}
+	EndGlobalSection
+EndGlobal
