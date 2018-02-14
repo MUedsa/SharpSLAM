@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Windows.Forms;
 
 namespace SharpSourceLiveAudioMixer.forms
@@ -10,6 +9,8 @@ namespace SharpSourceLiveAudioMixer.forms
         {
             InitializeComponent();
             textBox_steamfolder.Text = Program.Config["SteamFolder"];
+            label3.Text = Program.Config["ProxyKey","F1"];
+            checkBox1.Checked = Program.Config.GetBool("HoldToPlay",false);
         }
 
         private void button_scan_Click(object sender,EventArgs e)
@@ -35,6 +36,21 @@ namespace SharpSourceLiveAudioMixer.forms
                 textBox_steamfolder.Text = dialog.SelectedPath;
                 textBox_steamfolder_Leave();
             }
+        }
+
+        private void button2_Click(object sender,EventArgs e)
+        {
+            var dialog = new SelectKeyDialog(Program.Config["ProxyKey"]);
+            if(dialog.ShowDialog() == DialogResult.OK)
+            {
+                label3.Text = Program.Config["ProxyKey"] = dialog.Result;
+                Program.Config.Save();
+            }
+        }
+
+        private void checkBox1_CheckedChanged(object sender,EventArgs e)
+        {
+            Program.Config["HoldToPlay"] = checkBox1.Checked.ToString();
         }
     }
 }

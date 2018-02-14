@@ -43,10 +43,9 @@
             this.button_playkey = new System.Windows.Forms.Button();
             this.button_start = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
-            this.gameRelayWatcher = new System.IO.FileSystemWatcher();
             this.importFileDialog = new System.Windows.Forms.OpenFileDialog();
+            this.columnHeader6 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.groupBox_import.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.gameRelayWatcher)).BeginInit();
             this.SuspendLayout();
             // 
             // label1
@@ -85,7 +84,8 @@
             this.columnHeader2,
             this.columnHeader3,
             this.columnHeader4,
-            this.columnHeader5});
+            this.columnHeader5,
+            this.columnHeader6});
             this.listView1.FullRowSelect = true;
             this.listView1.GridLines = true;
             this.listView1.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
@@ -118,14 +118,15 @@
             // 
             // columnHeader4
             // 
-            this.columnHeader4.DisplayIndex = 0;
+            this.columnHeader4.DisplayIndex = 1;
             this.columnHeader4.Text = "Track";
-            this.columnHeader4.Width = 50;
+            this.columnHeader4.Width = 45;
             // 
             // columnHeader5
             // 
+            this.columnHeader5.DisplayIndex = 5;
             this.columnHeader5.Text = "Trim";
-            this.columnHeader5.Width = 104;
+            this.columnHeader5.Width = 91;
             // 
             // groupBox_import
             // 
@@ -188,18 +189,16 @@
             this.label2.Text = "No supported game found,please check steam folder settings =>";
             this.label2.Visible = false;
             // 
-            // gameRelayWatcher
-            // 
-            this.gameRelayWatcher.EnableRaisingEvents = true;
-            this.gameRelayWatcher.Filter = "slam_relay.cfg";
-            this.gameRelayWatcher.NotifyFilter = System.IO.NotifyFilters.LastWrite;
-            this.gameRelayWatcher.SynchronizingObject = this;
-            this.gameRelayWatcher.Changed += new System.IO.FileSystemEventHandler(this.gameRelayWatcher_Changed);
-            // 
             // importFileDialog
             // 
             this.importFileDialog.Multiselect = true;
             this.importFileDialog.Title = "Import Media File";
+            // 
+            // columnHeader6
+            // 
+            this.columnHeader6.DisplayIndex = 0;
+            this.columnHeader6.Text = "";
+            this.columnHeader6.Width = 18;
             // 
             // MainForm
             // 
@@ -218,9 +217,9 @@
             this.MaximizeBox = false;
             this.Name = "MainForm";
             this.Text = "Sharp Source Live Audio Mixer";
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.groupBox_import.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.gameRelayWatcher)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -240,11 +239,11 @@
         private System.Windows.Forms.Button button_start;
         private System.Windows.Forms.Button button_import_youtube;
         private System.Windows.Forms.Label label2;
-        private System.IO.FileSystemWatcher gameRelayWatcher;
         private System.Windows.Forms.OpenFileDialog importFileDialog;
         private System.Windows.Forms.ColumnHeader columnHeader3;
         private System.Windows.Forms.ColumnHeader columnHeader4;
         private System.Windows.Forms.ColumnHeader columnHeader5;
+        private System.Windows.Forms.ColumnHeader columnHeader6;
     }
 }
 

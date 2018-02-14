@@ -1,14 +1,14 @@
 ﻿using System;
 using System.IO;
+using System.Text;
+using System.Threading;
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Runtime.Serialization.Formatters.Binary;
 
 using NReco.VideoConverter;
-using System.Threading;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Drawing;
 
 namespace SharpSourceLiveAudioMixer.forms
 {
@@ -23,6 +23,7 @@ namespace SharpSourceLiveAudioMixer.forms
                 Name = "Counter-Strike: Global Offensive",
                 ExeName = "csgo.exe",
                 Directory = "Counter-Strike Global Offensive",
+                NoFadeOut=true,
                 EngineDirectory = "csgo",
                 SampleRate = 22050
             },
@@ -63,6 +64,7 @@ namespace SharpSourceLiveAudioMixer.forms
                 Name = "Left 4 Dead 2",
                 ExeName = "left4dead2.exe",
                 Directory = "Left 4 Dead 2",
+                NoFadeOut=true,
                 EngineDirectory = "left4dead2"
             },
             new SourceGame()
@@ -70,18 +72,52 @@ namespace SharpSourceLiveAudioMixer.forms
                 Name = "Day of Defeat Source",
                 Directory = "day of defeat source",
                 EngineDirectory = "dod"
+            },
+            new SourceGame()
+            {
+                Name = "Insurgency",
+                ExeName = "insurgency.exe",
+                Directory = "insurgency2",
+                EngineDirectory = "insurgency"
             }
         };
         public static BinaryFormatter formatter = new BinaryFormatter();
 
+        public int Track = -1;
         public bool Running = false;
         public SourceGame CurrentGame = null;
+        public List<FileSystemWatcher> Watchers = new List<FileSystemWatcher>();
 
         public MainForm()
         {
             instance = this;
-            new FFMpegConverter().ExtractFFmpeg();
             InitializeComponent();
+            CheckForIllegalCrossThreadCalls = false;
+        }
+
+        private void setEnabled(bool enabled)
+        {
+            groupBox_import.Enabled = comboBox1.Enabled = button_playkey.Enabled = button_settings.Enabled = enabled;
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg,Keys keyData)
+        {
+            if(keyData == Keys.Delete && listView1.SelectedItems.Count != 0)
+            {
+                foreach(ListViewItem item in listView1.SelectedItems)
+                {
+                    listView1.Items.Remove(item);
+                    var path = getGameConfigPath(item.Text,false);
+                    File.Delete(path + ".original");
+                    File.Delete(path + ".modified");
+                }
+                for(int i = 0;i < listView1.Items.Count;i++)
+                {
+                    listView1.Items[i].SubItems[3].Text = (i + 1).ToString();
+                }
+                saveTracks();
+            }
+            return base.ProcessCmdKey(ref msg,keyData);
         }
 
         #region Game Scanning
@@ -108,13 +144,13 @@ namespace SharpSourceLiveAudioMixer.forms
                         {
                             if(game.InstallDirectory != null)
                             {
-                                MessageBox.Show("Duplicate game installation detected.\nGame:" + game.Name + "\nDetected installation in " + game.InstallDirectory + ",another installation detected in " + path,"Warning",MessageBoxButtons.OK,MessageBoxIcon.Warning);
+                                MessageBox.Show("Duplicate game installation detected.\nGame:" + game.Name + "\nDetected installation in " + Path.GetDirectoryName(game.InstallDirectory) + ",another installation detected in " + path,"Warning",MessageBoxButtons.OK,MessageBoxIcon.Warning);
                             }
                             else
                             {
                                 comboBox1.Items.Add(game.Name);
                             }
-                            game.InstallDirectory = path;
+                            game.InstallDirectory = Path.Combine(path,game.Directory);
                         }
                     }
                 }
@@ -148,11 +184,11 @@ namespace SharpSourceLiveAudioMixer.forms
 
         #region Media & Game Config Processing
 
-        public string getGameConfigPath(string any)
+        public string getGameConfigPath(string any,bool removeExt = true)
         {
             string path = Path.GetFullPath("config/" + CurrentGame.Directory);
             Directory.CreateDirectory(path);
-            return Path.GetFullPath(Path.Combine(path,Path.GetFileNameWithoutExtension(any)));
+            return Path.GetFullPath(Path.Combine(path,removeExt ? Path.GetFileNameWithoutExtension(any) : Path.GetFileName(any)));
         }
 
         public bool convertNewMedia(string input)
@@ -183,6 +219,23 @@ namespace SharpSourceLiveAudioMixer.forms
                 return false;
             }
             return File.Exists(path);
+        }
+
+        public void switchTrack(int index)
+        {
+            if(Running && index < listView1.Items.Count && index != Track)
+            {
+                if(Track != -1)
+                {
+                    listView1.Items[Track].SubItems[5].Text = "";
+                }
+                listView1.Items[index].SubItems[5].Text = "X";
+                Track = index;
+                var path = getGameConfigPath(listView1.Items[index].Text,false);
+                path += File.Exists(path + ".modified") ? ".modified" : ".original";
+                File.Copy(path,Path.Combine(CurrentGame.InstallDirectory,"voice_input.wav"),true);
+                File.WriteAllText(Path.Combine(CurrentGame.FullConfigDirectory,"slam_current_track.cfg"),"echo \"[SLAM] Current Track: " + listView1.Items[index].Text + "\"");
+            }
         }
 
         public void saveTracks()
@@ -225,22 +278,103 @@ namespace SharpSourceLiveAudioMixer.forms
             }
         }
 
-        #endregion
-
-        #region Events
-
-        private void listView1_MouseClick(object sender,MouseEventArgs e)
+        public void addWatcher(string path)
         {
-            if(e.Button == MouseButtons.Right && listView1.SelectedItems.Count != 0)
+            var watcher = new FileSystemWatcher
             {
-                // TODO: Add menu always crashes my designer
+                Path = path,
+                Filter = "slam_proxy.cfg",
+                NotifyFilter = NotifyFilters.LastWrite,
+                EnableRaisingEvents = true,
+                IncludeSubdirectories = false
+            };
+            watcher.Changed += gameConfigProxyChanged;
+            Watchers.Add(watcher);
+        }
+
+        public void writeGameConfig()
+        {
+            // slam.cfg
+            var slam_config = new StringBuilder()
+                .AppendLine("alias slam_list \"exec slam_tracks\"")
+                .AppendLine("alias la slam_list")
+                .AppendLine("alias list slam_list")
+                .AppendLine("alias tracks slam_list")
+                .AppendLine()
+                .AppendLine("alias slam_toggle slam_on")
+                .AppendLine("alias slam_on \"alias slam_toggle slam_off;voice_inputfromfile 1;voice_loopback 1;+voicerecord\"")
+                .AppendLine("alias slam_off \"alias slam_toggle slam_on;-voicerecord;voice_inputfromfile 0;voice_loopback 0;\"")
+                .AppendLine("alias slam_sync \"host_writeconfig slam_proxy\"")
+                .AppendLine("alias slam_current \"exec slam_current_track\"");
+            if(Program.Config.GetBool("HoldToPlay",false))
+            {
+                slam_config.AppendLine("alias +slam_hold_play slam_on")
+                    .AppendLine("alias -slam_hold_play slam_off")
+                    .AppendLine("bind " + Program.Config["PlayKey"] + " +slam_hold_play");
+            }
+            else
+            {
+                slam_config.AppendLine("bind " + Program.Config["PlayKey"] + " slam_toggle");
+            }
+            slam_config.AppendLine()
+                .AppendLine("voice_enable 1")
+                .AppendLine("voice_modenable 1")
+                .AppendLine("voice_forcemicrecord 0");
+            if(!CurrentGame.NoFadeOut)
+            {
+                slam_config.AppendLine("voice_fadeouttime 0");
+            }
+            slam_config.AppendLine();
+            for(int i = 0;i < listView1.Items.Count;i++)
+            {
+                var item = listView1.Items[i];
+                var cmd = " \"bind " + Program.Config["ProxyKey","F1"] + " " + i + ";slam_sync;slam_off;echo Loaded: " + item.Text + "\"";
+                slam_config.AppendLine("alias " + (i + 1) + cmd);
+                if(item.SubItems[1].Text != "")
+                {
+                    slam_config.AppendLine("alias \"" + item.SubItems[1].Text + "\"" + cmd);
+                }
+            }
+            slam_config.AppendLine().AppendLine("echo \"SLAM has been loaded.Type la for tracks list or just press play key in game.\"");
+            File.WriteAllText(Path.Combine(CurrentGame.FullConfigDirectory,"slam.cfg"),slam_config.ToString());
+
+            // slam_tracks.cfg
+            var slam_tracks = new StringBuilder()
+                .AppendLine("echo \"You can select tracks by typing alias or track number.\"")
+                .AppendLine("echo \"------------------SLAM Tracks-----------------\"");
+            for(int i = 0;i < listView1.Items.Count;i++)
+            {
+                var item = listView1.Items[i];
+                slam_tracks.AppendLine("echo \"" + (i + 1) + ". " + item.Text + (item.SubItems[1].Text == "" ? "" : " [" + item.SubItems[1].Text + "]\""));
+            }
+            slam_tracks.AppendLine("echo \"----------------------------------------------\"");
+            File.WriteAllText(Path.Combine(CurrentGame.FullConfigDirectory,"slam_tracks.cfg"),slam_tracks.ToString());
+        }
+
+        public void gameConfigProxyChanged(object sender,FileSystemEventArgs e)
+        {
+            if(Running && CurrentGame != null && File.Exists(e.FullPath))
+            {
+                try
+                {
+                    var match = new Regex("bind \"?" + Program.Config["ProxyKey"] + "\"? \"?(\\d)\"?",RegexOptions.IgnoreCase).Match(File.ReadAllText(e.FullPath));
+                    if(match.Success && int.TryParse(match.Groups[1].Value,out int index))
+                    {
+                        switchTrack(index);
+                    }
+                    File.Delete(e.FullPath);
+                }
+                catch
+                {
+                    Thread.Sleep(10);
+                    gameConfigProxyChanged(sender,e);
+                }
             }
         }
 
-        private void gameRelayWatcher_Changed(object sender,FileSystemEventArgs e)
-        {
-            // TODO
-        }
+        #endregion
+
+        #region Events
 
         private void comboBox1_SelectedIndexChanged(object sender,EventArgs e)
         {
@@ -258,6 +392,7 @@ namespace SharpSourceLiveAudioMixer.forms
 
         private void MainForm_Load(object sender,EventArgs e)
         {
+            new FFMpegConverter().ExtractFFmpeg();
             if(Program.Config["SteamFolder",""] == "")
             {
                 try
@@ -274,9 +409,25 @@ namespace SharpSourceLiveAudioMixer.forms
             scanGames();
         }
 
+        private void MainForm_FormClosing(object sender,FormClosingEventArgs e)
+        {
+            if(button_start.Text == "Stop")
+            {
+                button_start.PerformClick();
+            }
+        }
+
+        private void listView1_MouseClick(object sender,MouseEventArgs e)
+        {
+            if(e.Button == MouseButtons.Right && listView1.SelectedItems.Count != 0)
+            {
+                // TODO: Add menu always crashes my designer
+            }
+        }
+
         private void listView1_MouseDoubleClick(object sender,MouseEventArgs e)
         {
-            if(listView1.SelectedItems.Count == 1)
+            if(!Running && listView1.SelectedItems.Count == 1)
             {
                 var item = listView1.SelectedItems[0];
                 var dialog = new SetAliasDialog(item.SubItems[1].Text);
@@ -312,12 +463,13 @@ namespace SharpSourceLiveAudioMixer.forms
         {
             if(importFileDialog.ShowDialog() == DialogResult.OK)
             {
-                var processing = new ProcessingDialog(0,importFileDialog.FileNames.Length);
+                button_import_file.Enabled = false;
+                var files = importFileDialog.FileNames;
+                var processing = new ProcessingDialog(0,files.Length);
                 new Thread(new ThreadStart(() =>
                 {
                     var failed = "";
-                    CheckForIllegalCrossThreadCalls = false;
-                    foreach(string file in importFileDialog.FileNames)
+                    foreach(string file in files)
                     {
                         var key = Path.GetFileNameWithoutExtension(file);
                         if(listView1.Items.ContainsKey(key) && MessageBox.Show("Audio name \"" + Path.GetFileNameWithoutExtension(file) + "\" already exists,continue and override it?","Confirm",MessageBoxButtons.YesNo,MessageBoxIcon.Question) != DialogResult.Yes)
@@ -330,7 +482,7 @@ namespace SharpSourceLiveAudioMixer.forms
                         {
                             listView1.Items.Add(key,key,0).SubItems.AddRange(new string[]
                             {
-                                "","100",listView1.Items.Count.ToString(),""
+                                "","100",listView1.Items.Count.ToString(),"",""
                             });
                         }
                         else
@@ -341,26 +493,57 @@ namespace SharpSourceLiveAudioMixer.forms
                     }
                     processing.update();
                     saveTracks();
-                    MessageBox.Show("Processed " + importFileDialog.FileNames.Length + " file(s)." + (failed == "" ? "" : "\n\nFollowing file(s) convert failed:" + failed),"Done",MessageBoxButtons.OK,MessageBoxIcon.Information);
-                    CheckForIllegalCrossThreadCalls = true;
+                    button_import_file.Enabled = true;
+                    MessageBox.Show("Processed " + files.Length + " file(s)." + (failed == "" ? "" : "\n\nFollowing file(s) convert failed:" + failed),"Done",MessageBoxButtons.OK,MessageBoxIcon.Information);
                 })).Start();
-                processing.ShowDialog();
+                processing.Show();
             }
         }
 
         private void button_start_Click(object sender,EventArgs e)
         {
+            if(CurrentGame == null)
+            {
+                return;
+            }
+            if(listView1.Items.Count == 0)
+            {
+                MessageBox.Show("Please import media files before start.","Warning",MessageBoxButtons.OK,MessageBoxIcon.Warning);
+                return;
+            }
             if(Running = !Running)
             {
                 button_start.Text = "Stop";
-                // TODO
-
+                if(CurrentGame.Id == -1)
+                {
+                    addWatcher(CurrentGame.FullConfigDirectory);
+                }
+                else
+                {
+                    var sub = Path.Combine(CurrentGame.Id.ToString(),"local/cfg");
+                    foreach(var dir in Directory.EnumerateDirectories(Path.Combine(Program.Config["SteamFolder"],"userdata"),"*",SearchOption.TopDirectoryOnly))
+                    {
+                        addWatcher(Path.Combine(dir,sub));
+                    }
+                }
+                writeGameConfig();
+                switchTrack(0);
             }
             else
             {
+                foreach(var watcher in Watchers)
+                {
+                    watcher.Dispose();
+                }
+                Watchers.Clear();
+                Track = -1;
                 button_start.Text = "Start";
-                // TODO
+                File.Delete(Path.Combine(CurrentGame.InstallDirectory,"voice_input.wav"));
+                File.Delete(Path.Combine(CurrentGame.FullConfigDirectory,"slam.cfg"));
+                File.Delete(Path.Combine(CurrentGame.FullConfigDirectory,"slam_tracks.cfg"));
+                File.Delete(Path.Combine(CurrentGame.FullConfigDirectory,"slam_current_track.cfg"));
             }
+            setEnabled(!Running);
         }
 
         private void button_playkey_Click(object sender,EventArgs e)
@@ -369,29 +552,10 @@ namespace SharpSourceLiveAudioMixer.forms
             if(dialog.ShowDialog() == DialogResult.OK)
             {
                 Program.Config["PlayKey"] = dialog.Result;
+                Program.Config.Save();
             }
         }
 
         #endregion
-
-        protected override bool ProcessCmdKey(ref Message msg,Keys keyData)
-        {
-            if(keyData == Keys.Delete && listView1.SelectedItems.Count != 0)
-            {
-                foreach(ListViewItem item in listView1.SelectedItems)
-                {
-                    listView1.Items.Remove(item);
-                    var path = getGameConfigPath(item.Text + ".lmao");
-                    File.Delete(path + ".original");
-                    File.Delete(path + ".modified");
-                }
-                for(int i = 0;i < listView1.Items.Count;i++)
-                {
-                    listView1.Items[i].SubItems[3].Text = (i + 1).ToString();
-                }
-                saveTracks();
-            }
-            return base.ProcessCmdKey(ref msg,keyData);
-        }
     }
 }
