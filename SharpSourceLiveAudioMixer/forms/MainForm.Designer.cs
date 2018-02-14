@@ -125,6 +125,7 @@
             // 
             // columnHeader6
             // 
+            this.columnHeader6.DisplayIndex = 0;
             this.columnHeader6.Text = "";
             this.columnHeader6.Width = 18;
             // 

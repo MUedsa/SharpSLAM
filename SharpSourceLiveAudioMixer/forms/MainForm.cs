@@ -437,7 +437,7 @@ namespace SharpSourceLiveAudioMixer.forms
             {
                 try
                 {
-                    var match = new Regex("bind \"?" + Program.Config["ProxyKey"] + "\"? \"?(\\d)\"?",RegexOptions.IgnoreCase).Match(File.ReadAllText(e.FullPath));
+                    var match = new Regex("bind \"?" + Program.Config["ProxyKey"] + "\"? \"?(\\d+)\"?",RegexOptions.IgnoreCase).Match(File.ReadAllText(e.FullPath));
                     if(match.Success && int.TryParse(match.Groups[1].Value,out int index))
                     {
                         switchTrack(index);
@@ -592,9 +592,10 @@ namespace SharpSourceLiveAudioMixer.forms
                 }
                 else
                 {
-                    var sub = Path.Combine(CurrentGame.Id.ToString(),"local/cfg");
+                    var sub = Path.Combine(CurrentGame.Id.ToString(),"local","cfg");
                     foreach(var dir in Directory.EnumerateDirectories(Path.Combine(Program.Config["SteamFolder"],"userdata"),"*",SearchOption.TopDirectoryOnly))
                     {
+                        Directory.CreateDirectory(Path.Combine(dir,sub));
                         addWatcher(Path.Combine(dir,sub));
                     }
                 }
