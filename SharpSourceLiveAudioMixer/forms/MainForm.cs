@@ -10,6 +10,8 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 using NReco.VideoConverter;
 
+using SharpSourceLiveAudioMixer.dialogs;
+
 namespace SharpSourceLiveAudioMixer.forms
 {
     public partial class MainForm : Form
@@ -88,11 +90,100 @@ namespace SharpSourceLiveAudioMixer.forms
         public SourceGame CurrentGame = null;
         public List<FileSystemWatcher> Watchers = new List<FileSystemWatcher>();
 
+        private MenuItem menu_play = null, menu_edit = null, menu_alias = null, menu_trim = null, menu_volume = null, menu_remove = null;
+
         public MainForm()
         {
             instance = this;
             InitializeComponent();
             CheckForIllegalCrossThreadCalls = false;
+
+            #region Right Click Menu
+
+            var menu = new ContextMenu();
+            menu_play = menu.MenuItems.Add("Play",(sender,e) =>
+            {
+                var path = getGameConfigPath(listView1.SelectedItems[0].Text,false);
+                MusicPlayForm.getInstance(path + (File.Exists(path + ".modified") ? ".modified" : ".original")).Show();
+                MusicPlayForm.player.Play();
+            });
+            menu_edit = menu.MenuItems.Add("Edit",new MenuItem[]
+            {
+                menu_trim = new MenuItem("Trim",(sender,e) =>
+                {
+                    var dialog=new TrimDialog();
+                    if(dialog.ShowDialog()==DialogResult.OK)
+                    {
+                        // TODO.
+                    }
+                }),
+                menu_volume = new MenuItem("Adjust Volume",(sender,e) =>
+                {
+                    var dialog=new AdjustVolumeDialog();
+                    if(dialog.ShowDialog()==DialogResult.OK)
+                    {
+                        var items = listView1.SelectedItems;
+                        var processing = new ProcessingDialog(0,items.Count);
+                        new Thread(new ThreadStart(() =>
+                        {
+                            int result=dialog.Result;
+                            var failed = "";
+                            foreach(ListViewItem item in items)
+                            {
+                                item.SubItems[2].Text=result.ToString();
+                                if(!reConvertModifiedMedia(item))
+                                {
+                                    failed += "\n" + item.Text;
+                                    item.SubItems[2].Text="100";
+                                    File.Delete(getGameConfigPath(item.Text,false) + ".modified");
+                                }
+                                processing.update();
+                            }
+                            processing.update();
+                            saveTracks();
+                            MessageBox.Show("Processed " + items.Count + " file(s)." + (failed == "" ? "" : "\n\nFollowing file(s) process failed:" + failed),"Done",MessageBoxButtons.OK,MessageBoxIcon.Information);
+                        })).Start();
+                        processing.ShowDialog();
+                    }
+                })
+            });
+            menu_alias = menu.MenuItems.Add("Set Alias",(sender,e) =>
+            {
+                listView1_MouseDoubleClick();
+            });
+            menu_remove = menu.MenuItems.Add("Remove",(sender,e) =>
+            {
+                if(!Running && listView1.SelectedItems.Count != 0)
+                {
+                    foreach(ListViewItem item in listView1.SelectedItems)
+                    {
+                        listView1.Items.Remove(item);
+                        var path = getGameConfigPath(item.Text,false);
+                        File.Delete(path + ".original");
+                        File.Delete(path + ".modified");
+                    }
+                    for(int i = 0;i < listView1.Items.Count;i++)
+                    {
+                        listView1.Items[i].SubItems[3].Text = (i + 1).ToString();
+                    }
+                    saveTracks();
+                }
+            });
+            menu.Popup += (sender,e) =>
+            {
+                if(listView1.SelectedItems.Count == 0)
+                {
+                    menu_play.Visible = menu_alias.Visible = menu_edit.Visible = menu_remove.Visible = false;
+                }
+                else
+                {
+                    menu_edit.Visible = menu_remove.Visible = true;
+                    menu_play.Visible = menu_alias.Visible = menu_trim.Visible = listView1.SelectedItems.Count == 1;
+                }
+            };
+            listView1.ContextMenu = menu;
+
+            #endregion
         }
 
         private void setEnabled(bool enabled)
@@ -102,20 +193,9 @@ namespace SharpSourceLiveAudioMixer.forms
 
         protected override bool ProcessCmdKey(ref Message msg,Keys keyData)
         {
-            if(keyData == Keys.Delete && listView1.SelectedItems.Count != 0)
+            if(keyData == Keys.Delete)
             {
-                foreach(ListViewItem item in listView1.SelectedItems)
-                {
-                    listView1.Items.Remove(item);
-                    var path = getGameConfigPath(item.Text,false);
-                    File.Delete(path + ".original");
-                    File.Delete(path + ".modified");
-                }
-                for(int i = 0;i < listView1.Items.Count;i++)
-                {
-                    listView1.Items[i].SubItems[3].Text = (i + 1).ToString();
-                }
-                saveTracks();
+                menu_remove.PerformClick();
             }
             return base.ProcessCmdKey(ref msg,keyData);
         }
@@ -196,7 +276,7 @@ namespace SharpSourceLiveAudioMixer.forms
             string path = getGameConfigPath(input) + ".original";
             try
             {
-                new FFMpegConverter().Invoke("-i \"" + Path.GetFullPath(input) + "\" -f wav -flags bitexact -map_metadata -1 -vn -acodec pcm_s16le -ar " + CurrentGame.SampleRate + " -ac 1 \"" + path + "\"");
+                new FFMpegConverter().Invoke("-i \"" + Path.GetFullPath(input) + "\" -f wav -flags bitexact -map_metadata -1 -vn -b:a 192k -acodec pcm_s16le -ar " + CurrentGame.SampleRate + " -ac 1 \"" + path + "\"");
             }
             catch
             {
@@ -205,20 +285,20 @@ namespace SharpSourceLiveAudioMixer.forms
             return File.Exists(path);
         }
 
-        public bool reConvertModifiedMedia(int index)
+        public bool reConvertModifiedMedia(ListViewItem item)
         {
-            // TODO: Add trim and volume adjust
-            string path = getGameConfigPath(listView1.Items[index].Text);
-            // "-i \"{0}\" -y -f wav -flags bitexact -map_metadata -1 -vn -acodec pcm_s16le -ar {1} -ac 1 {2}-af \"volume={3}\" \"{4}\""
+            // TODO: Add trim
+            string path = getGameConfigPath(item.Text,false);
             try
             {
-                new FFMpegConverter().Invoke("-i \"" + path + ".original\" -y -f wav -flags bitexact -map_metadata -1 -vn -acodec pcm_s16le -ar " + CurrentGame.SampleRate + " -ac 1 \"" + path + ".modified\"");
+                File.Delete(path + ".modified");
+                new FFMpegConverter().Invoke("-i \"" + path + ".original\" -y -f wav -flags bitexact -map_metadata -1 -vn -acodec pcm_s16le -ar " + CurrentGame.SampleRate + " -ac 1 -af \"volume=" + (int.Parse(item.SubItems[2].Text) / 100f) + "\" \"" + path + ".modified\"");
             }
             catch
             {
                 return false;
             }
-            return File.Exists(path);
+            return File.Exists(path + ".modified");
         }
 
         public void switchTrack(int index)
@@ -227,9 +307,9 @@ namespace SharpSourceLiveAudioMixer.forms
             {
                 if(Track != -1)
                 {
-                    listView1.Items[Track].SubItems[5].Text = "";
+                    listView1.Items[Track].SubItems[5] = new ListViewItem.ListViewSubItem();
                 }
-                listView1.Items[index].SubItems[5].Text = "X";
+                listView1.Items[index].SubItems[5] = new ListViewItem.ListViewSubItem(listView1.Items[index],"X");
                 Track = index;
                 var path = getGameConfigPath(listView1.Items[index].Text,false);
                 path += File.Exists(path + ".modified") ? ".modified" : ".original";
@@ -270,7 +350,7 @@ namespace SharpSourceLiveAudioMixer.forms
                         {
                             using(var ms = new MemoryStream(Program.Base64Decode(data)))
                             {
-                                listView1.Items.Add((ListViewItem)formatter.Deserialize(ms));
+                                listView1.Items.Add((ListViewItem)formatter.Deserialize(ms)).SubItems[5] = new ListViewItem.ListViewSubItem();
                             }
                         }
                     }
@@ -374,7 +454,7 @@ namespace SharpSourceLiveAudioMixer.forms
 
         #endregion
 
-        #region Events
+        #region Other Events
 
         private void comboBox1_SelectedIndexChanged(object sender,EventArgs e)
         {
@@ -417,15 +497,7 @@ namespace SharpSourceLiveAudioMixer.forms
             }
         }
 
-        private void listView1_MouseClick(object sender,MouseEventArgs e)
-        {
-            if(e.Button == MouseButtons.Right && listView1.SelectedItems.Count != 0)
-            {
-                // TODO: Add menu always crashes my designer
-            }
-        }
-
-        private void listView1_MouseDoubleClick(object sender,MouseEventArgs e)
+        private void listView1_MouseDoubleClick(object sender = null,MouseEventArgs e = null)
         {
             if(!Running && listView1.SelectedItems.Count == 1)
             {
@@ -496,7 +568,7 @@ namespace SharpSourceLiveAudioMixer.forms
                     button_import_file.Enabled = true;
                     MessageBox.Show("Processed " + files.Length + " file(s)." + (failed == "" ? "" : "\n\nFollowing file(s) convert failed:" + failed),"Done",MessageBoxButtons.OK,MessageBoxIcon.Information);
                 })).Start();
-                processing.Show();
+                processing.ShowDialog();
             }
         }
 
@@ -536,6 +608,10 @@ namespace SharpSourceLiveAudioMixer.forms
                     watcher.Dispose();
                 }
                 Watchers.Clear();
+                foreach(ListViewItem item in listView1.Items)
+                {
+                    item.SubItems[5] = new ListViewItem.ListViewSubItem();
+                }
                 Track = -1;
                 button_start.Text = "Start";
                 File.Delete(Path.Combine(CurrentGame.InstallDirectory,"voice_input.wav"));
@@ -554,6 +630,16 @@ namespace SharpSourceLiveAudioMixer.forms
                 Program.Config["PlayKey"] = dialog.Result;
                 Program.Config.Save();
             }
+        }
+
+        private void button_import_youtube_Click(object sender,EventArgs e)
+        {
+
+        }
+
+        private void button_import_netease_Click(object sender,EventArgs e)
+        {
+
         }
 
         #endregion

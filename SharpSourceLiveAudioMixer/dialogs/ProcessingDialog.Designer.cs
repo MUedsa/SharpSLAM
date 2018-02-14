@@ -1,4 +1,4 @@
-﻿namespace SharpSourceLiveAudioMixer.forms
+﻿namespace SharpSourceLiveAudioMixer.dialogs
 {
     partial class ProcessingDialog
     {

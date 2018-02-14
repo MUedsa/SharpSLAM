@@ -1,6 +1,6 @@
 ﻿using System.Windows.Forms;
 
-namespace SharpSourceLiveAudioMixer.forms
+namespace SharpSourceLiveAudioMixer.dialogs
 {
     public partial class ProcessingDialog : Form
     {

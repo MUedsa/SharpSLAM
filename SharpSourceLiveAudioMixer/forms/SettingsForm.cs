@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Windows.Forms;
 
+using SharpSourceLiveAudioMixer.dialogs;
+
 namespace SharpSourceLiveAudioMixer.forms
 {
     public partial class SettingsForm : Form
@@ -51,6 +53,7 @@ namespace SharpSourceLiveAudioMixer.forms
         private void checkBox1_CheckedChanged(object sender,EventArgs e)
         {
             Program.Config["HoldToPlay"] = checkBox1.Checked.ToString();
+            Program.Config.Save();
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace SharpSourceLiveAudioMixer.forms
+﻿namespace SharpSourceLiveAudioMixer.dialogs
 {
     partial class SelectKeyDialog
     {
@@ -169,7 +169,7 @@
             this.label1.TabIndex = 2;
             this.label1.Text = "Select or type a key name works with bind command.";
             // 
-            // SelectKeyForm
+            // SelectKeyDialog
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -180,7 +180,8 @@
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.Name = "SelectKeyForm";
+            this.Name = "SelectKeyDialog";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Select Key";
             this.ResumeLayout(false);
             this.PerformLayout();

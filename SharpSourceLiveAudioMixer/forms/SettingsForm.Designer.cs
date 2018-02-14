@@ -90,9 +90,9 @@
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(12, 44);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(161, 12);
+            this.label2.Size = new System.Drawing.Size(167, 12);
             this.label2.TabIndex = 5;
-            this.label2.Text = "Proxy Key(Don\'t press it):";
+            this.label2.Text = "Proxy Key (Don\'t press it):";
             // 
             // label3
             // 
@@ -130,6 +130,7 @@
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "SettingsForm";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Settings";
             this.ResumeLayout(false);
             this.PerformLayout();

@@ -37,6 +37,7 @@
             this.columnHeader3 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader4 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeader5 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.columnHeader6 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.groupBox_import = new System.Windows.Forms.GroupBox();
             this.button_import_youtube = new System.Windows.Forms.Button();
             this.button_import_file = new System.Windows.Forms.Button();
@@ -44,7 +45,7 @@
             this.button_start = new System.Windows.Forms.Button();
             this.label2 = new System.Windows.Forms.Label();
             this.importFileDialog = new System.Windows.Forms.OpenFileDialog();
-            this.columnHeader6 = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
+            this.button_import_netease = new System.Windows.Forms.Button();
             this.groupBox_import.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -95,58 +96,60 @@
             this.listView1.TabIndex = 3;
             this.listView1.UseCompatibleStateImageBehavior = false;
             this.listView1.View = System.Windows.Forms.View.Details;
-            this.listView1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.listView1_MouseClick);
             this.listView1.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.listView1_MouseDoubleClick);
             // 
             // columnHeader1
             // 
-            this.columnHeader1.DisplayIndex = 1;
             this.columnHeader1.Text = "Name";
             this.columnHeader1.Width = 200;
             // 
             // columnHeader2
             // 
-            this.columnHeader2.DisplayIndex = 2;
             this.columnHeader2.Text = "Alias";
             this.columnHeader2.Width = 120;
             // 
             // columnHeader3
             // 
-            this.columnHeader3.DisplayIndex = 3;
             this.columnHeader3.Text = "Volumn";
             this.columnHeader3.Width = 50;
             // 
             // columnHeader4
             // 
-            this.columnHeader4.DisplayIndex = 1;
             this.columnHeader4.Text = "Track";
             this.columnHeader4.Width = 45;
             // 
             // columnHeader5
             // 
-            this.columnHeader5.DisplayIndex = 5;
             this.columnHeader5.Text = "Trim";
             this.columnHeader5.Width = 91;
             // 
+            // columnHeader6
+            // 
+            this.columnHeader6.Text = "";
+            this.columnHeader6.Width = 18;
+            // 
             // groupBox_import
             // 
+            this.groupBox_import.Controls.Add(this.button_import_netease);
             this.groupBox_import.Controls.Add(this.button_import_youtube);
             this.groupBox_import.Controls.Add(this.button_import_file);
             this.groupBox_import.Location = new System.Drawing.Point(12, 255);
             this.groupBox_import.Name = "groupBox_import";
-            this.groupBox_import.Size = new System.Drawing.Size(168, 49);
+            this.groupBox_import.Size = new System.Drawing.Size(291, 49);
             this.groupBox_import.TabIndex = 4;
             this.groupBox_import.TabStop = false;
             this.groupBox_import.Text = "Import";
             // 
             // button_import_youtube
             // 
+            this.button_import_youtube.Enabled = false;
             this.button_import_youtube.Location = new System.Drawing.Point(87, 20);
             this.button_import_youtube.Name = "button_import_youtube";
             this.button_import_youtube.Size = new System.Drawing.Size(75, 23);
             this.button_import_youtube.TabIndex = 1;
             this.button_import_youtube.Text = "Youtube";
             this.button_import_youtube.UseVisualStyleBackColor = true;
+            this.button_import_youtube.Click += new System.EventHandler(this.button_import_youtube_Click);
             // 
             // button_import_file
             // 
@@ -194,11 +197,16 @@
             this.importFileDialog.Multiselect = true;
             this.importFileDialog.Title = "Import Media File";
             // 
-            // columnHeader6
+            // button_import_netease
             // 
-            this.columnHeader6.DisplayIndex = 0;
-            this.columnHeader6.Text = "";
-            this.columnHeader6.Width = 18;
+            this.button_import_netease.Enabled = false;
+            this.button_import_netease.Location = new System.Drawing.Point(168, 20);
+            this.button_import_netease.Name = "button_import_netease";
+            this.button_import_netease.Size = new System.Drawing.Size(117, 23);
+            this.button_import_netease.TabIndex = 2;
+            this.button_import_netease.Text = "Netease Music";
+            this.button_import_netease.UseVisualStyleBackColor = true;
+            this.button_import_netease.Click += new System.EventHandler(this.button_import_netease_Click);
             // 
             // MainForm
             // 
@@ -244,6 +252,7 @@
         private System.Windows.Forms.ColumnHeader columnHeader4;
         private System.Windows.Forms.ColumnHeader columnHeader5;
         private System.Windows.Forms.ColumnHeader columnHeader6;
+        private System.Windows.Forms.Button button_import_netease;
     }
 }
 
